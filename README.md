@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SamInvest — Frontend
 
-## Getting Started
+Samarqand viloyati Investitsiyalar, sanoat va savdo boshqarmasi (**saminvestcompany.uz**) rasmiy portali. Ko'p tilli axborot portali + admin panel.
 
-First, run the development server:
+## Texnologiyalar
+
+- **Next.js 16** (App Router), **React 19**
+- **Tailwind CSS v4** + **shadcn/ui** + Radix
+- **next-intl** — 4 til: `uz` (lotin, default), `oz` (kirill), `ru`, `en`
+- **TanStack Query** + **axios** (backend bilan)
+- **Yandex Maps** (kalkulyator xaritasi)
+- Chat: **Crisp emas** — o'z Telegram-chat vidjeti
+
+## Asosiy imkoniyatlar
+
+- **Ommaviy portal:** bosh sahifa, yangiliklar/tadbirlar/e'lonlar, foto/video galereya, dinamik menyu sahifalari
+- **Infratuzilma yig'imi kalkulyatori** (`/[locale]/calc`) — VM 151-son qarori (08.04.2026) bo'yicha:
+  - Yandex xaritada joyni tanlash → aholi bo'yicha **Кз avtomatik**
+  - Koeffitsientlar tanlanadi, bosqichma-bosqich hisob-kitob, 4 tilда
+- **Telegram onlayn chat** vidjeti (barcha ommaviy sahifalarда)
+- **Admin panel** (`/[locale]/admin`) — menyu, nashrlar, galereya, sozlamalar
+
+## Ishga tushirish
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+# .env.local yarating (pastda)
+pnpm dev            # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Til prefiksli manzillar: `/uz`, `/oz`, `/ru`, `/en` (masalan `/uz/calc`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment (`.env.local`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+NEXT_PUBLIC_BACKEND_URL=http://localhost:1248          # prod: https://api.saminvestcompany.uz
+NEXT_PUBLIC_YANDEX_API_KEY=...                          # Yandex Maps JavaScript API kaliti
+```
 
-## Learn More
+> ⚠️ `NEXT_PUBLIC_*` env'lar **build vaqtida** muhrlanadi — productionда `pnpm build`дан **oldin** o'rnating.
 
-To learn more about Next.js, take a look at the following resources:
+## Tuzilma
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/[locale]/
+│   ├── (public)/       # portal: bosh, calc, galereya, publication, [menu]
+│   ├── (admin)/        # admin panel
+│   └── login/
+├── components/         # calc/, chatbot/, header/, footer/, admin/, ui/ ...
+├── i18n/               # next-intl (routing, request)
+├── models/axios.ts     # API instance
+└── proxy.ts            # middleware (auth + i18n)
+messages/               # uz.json · oz.json · ru.json · en.json
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Ko'p tillilik (i18n)
 
-## Deploy on Vercel
+- Tarjimalar `messages/<locale>.json`da. Kalkulyator — `calc` namespace ostида.
+- `oz` (kirill) — `uz` (lotin)dан transliteratsiya orqali hosil qilingan.
+- Komponentда: `const t = useTranslations('calc'); t('title')`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Production deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+pm2 + nginx bo'yicha to'liq yo'riqnoma: repo ildizidagi **`DEPLOY.md`**.
