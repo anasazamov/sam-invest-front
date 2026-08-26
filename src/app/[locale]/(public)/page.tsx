@@ -1,4 +1,5 @@
 import Announcements from '@/components/announcements/announcements'
+import CalcCta from '@/components/calc/calc-cta'
 import Events from '@/components/events/events'
 import HeroSection from '@/components/hero-section/hero-section'
 import NewsSection from '@/components/news-section/news-section'
@@ -97,6 +98,7 @@ export default function Home() {
     return (
         <div>
             <HeroSection />
+            <CalcCta />
             <NewsSection />
             <StatisticsSection />
             <Announcements />

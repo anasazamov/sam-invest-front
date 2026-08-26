@@ -2,6 +2,7 @@
 
 import { api } from '@/models/axios'
 import { Loader2, MapPin, Search } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 
 declare global {
@@ -51,6 +52,7 @@ export default function LocationPicker({
 }: {
     onResolve: (loc: ResolvedLocation) => void
 }) {
+    const t = useTranslations('calc')
     const mapEl = useRef<HTMLDivElement | null>(null)
     const mapRef = useRef<any>(null)
     const pinRef = useRef<any>(null)
@@ -68,7 +70,7 @@ export default function LocationPicker({
     useEffect(() => {
         let alive = true
         if (!KEY) {
-            setError('Yandex API kaliti sozlanmagan (NEXT_PUBLIC_YANDEX_API_KEY)')
+            setError(t('locErrKey'))
             setLoading(false)
             return
         }
@@ -89,8 +91,8 @@ export default function LocationPicker({
                     void reverse(c[0], c[1])
                 })
             })
-            .catch((err) => {
-                setError(err.message)
+            .catch(() => {
+                setError(t('locErrMap'))
                 setLoading(false)
             })
         return () => {
@@ -151,10 +153,10 @@ export default function LocationPicker({
                     source: data.territory?.source,
                 })
             } else {
-                setError('Joyni aniqlab bo‘lmadi. Qayta urinib ko‘ring.')
+                setError(t('locErrResolve'))
             }
         } catch {
-            setError('Joyni aniqlab bo‘lmadi. Qayta urinib ko‘ring.')
+            setError(t('locErrResolve'))
         } finally {
             setBusy(false)
         }
@@ -169,9 +171,9 @@ export default function LocationPicker({
         try {
             const { data } = await api.get('/geo/search', { params: { q } })
             setHits(Array.isArray(data) ? data : [])
-            if (!data?.length) setError('Manzil topilmadi.')
+            if (!data?.length) setError(t('locErrAddr'))
         } catch {
-            setError('Qidiruvda xatolik.')
+            setError(t('locErrSearch'))
         } finally {
             setSearching(false)
         }
@@ -189,7 +191,7 @@ export default function LocationPicker({
         e?.preventDefault()
         const m = coord.split(/[,;\s]+/).map((x) => parseFloat(x.trim()))
         if (m.length < 2 || !isFinite(m[0]) || !isFinite(m[1])) {
-            setError('Koordinata formati: kenglik, uzunlik (masalan 39.654, 66.959)')
+            setError(t('locErrCoord'))
             return
         }
         centerTo(m[0], m[1])
@@ -204,7 +206,7 @@ export default function LocationPicker({
                     <input
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
-                        placeholder="Manzil bo‘yicha qidirish (masalan: Samarqand, Registon)"
+                        placeholder={t('locSearchPh')}
                         className="w-full pl-10 pr-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-indigo-500 outline-none text-sm"
                     />
                     <button
@@ -238,21 +240,21 @@ export default function LocationPicker({
                     <input
                         value={coord}
                         onChange={(e) => setCoord(e.target.value)}
-                        placeholder="Koordinata: 39.654, 66.959"
+                        placeholder={t('locCoordPh')}
                         className="flex-1 px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-indigo-500 outline-none text-sm"
                     />
                     <button
                         type="submit"
                         className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 shrink-0"
                     >
-                        Borish
+                        {t('locCoordGo')}
                     </button>
                 </form>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-gray-600">
                 <MapPin className="w-4 h-4 text-indigo-600" />
-                Xaritada qurilish joyini bosing — <b>Кз avtomatik</b> aniqlanadi.
+                {t('locMapHint')}
             </div>
 
             <div className="relative">
@@ -268,7 +270,7 @@ export default function LocationPicker({
                 {busy && (
                     <div className="absolute top-2 right-2 bg-white/90 rounded-lg px-3 py-1.5 text-sm flex items-center gap-2 shadow">
                         <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
-                        Aniqlanmoqda…
+                        {t('locResolving')}
                     </div>
                 )}
             </div>

@@ -3,58 +3,40 @@
 import LocationPicker, {
     ResolvedLocation,
 } from '@/components/calc/location-picker'
-import { Calculator, ChevronDown, Info, MapPin, RefreshCw } from 'lucide-react'
+import { ChevronDown, Info, MapPin, RefreshCw } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useMemo, useState } from 'react'
 
 /**
- * Muhandislik-kommunikatsiya va transport infratuzilmasi yig'imi kalkulyatori.
- * Asos: VM 2026-yil 8-apreldagi 151-son qarori, 4-ilova (Nizom) 2-ilovasi.
- *
+ * Infratuzilma yig'imi kalkulyatori — VM 2026-yil 8-apreldagi 151-son qarori.
  * Formula: Yig'im = BHM × ((Хб + Хю) − (Ха + Хт + Ху)) × Кт × Ко × Кз × Кж
- * Cheklov: Кт×Ко×Кз×Кж koeffitsienti 0.01 dan kam bo'lsa — 0.01 ga tenglashadi.
  */
 
-const KT_OPTIONS = [
-    { value: 1, label: 'Yangi qurilish (rivojlanish)' },
-    { value: 0.5, label: 'Renovatsiya' },
-    { value: 0.85, label: 'Obyektni rekonstruksiya qilish' },
+const KT = [
+    { v: 1, k: 'ktNew' },
+    { v: 0.5, k: 'ktRenovation' },
+    { v: 0.85, k: 'ktReconstruction' },
 ]
-
-const KO_OPTIONS = [
-    { value: 0.8, label: 'Ijtimoiy-xususiy obyekt (o‘quv markazi, xususiy klinika va b.)' },
-    { value: 0.5, label: 'Davlat ulushi 50%+ investitsiya loyihasi obyekti' },
-    { value: 0.5, label: 'Sanoat binosi (ishlab chiqarish/ombor) — har qavat 3 m gacha' },
-    { value: 1, label: 'Boshqa obyektlar' },
+const KO = [
+    { v: 1, k: 'koResidential' },
+    { v: 0.8, k: 'koSocial' },
+    { v: 0.5, k: 'koState' },
+    { v: 0.5, k: 'koIndustrial' },
 ]
-
-const KZ_OPTIONS = [
-    { value: 1, label: '1 mln kishidan ortiq shahar (Toshkent 1–2)' },
-    { value: 0.5, label: '500 ming – 1 mln kishilik shahar' },
-    { value: 0.2, label: '250 ming – 500 ming kishilik shahar' },
-    { value: 0.1, label: '100 ming – 250 ming kishilik shahar' },
-    { value: 0.05, label: '100 minggacha / boshqa aholi punkti' },
+const KZ = [
+    { v: 1, k: 'kz1' },
+    { v: 0.5, k: 'kz2' },
+    { v: 0.2, k: 'kz3' },
+    { v: 0.1, k: 'kz4' },
+    { v: 0.05, k: 'kz5' },
 ]
-
-const KZH_OPTIONS = [
-    { value: 1, label: 'Markaziy qatnov ko‘chasida joylashgan (yoki boshqa holatlar)' },
-    { value: 0.6, label: 'Markaziy qatnov ko‘chalaridan boshqa hududda' },
+const KZH = [
+    { v: 1, k: 'kzhCentral' },
+    { v: 0.6, k: 'kzhOther' },
 ]
 
 const BHM_2025 = 412000
 const BHM_2026 = 440000
-
-// Umumiy hajmga qo'shiladigan qismlar
-const ADD_FIELDS = [
-    { key: 'xb', symbol: 'Хб', label: 'Binoning umumiy hajmi', hint: 'Loyihadagi umumiy qurilish hajmi' },
-    { key: 'xyu', symbol: 'Хю', label: 'Ruxsat etilgan qavatlardan yuqori hajm', hint: 'Belgilangan qavat sonidan oshirilgan qism hajmi (bo‘lmasa 0)' },
-] as const
-
-// Bino umumiy hajmi ICHIDAGI, ayiriladigan qismlar
-const SUB_FIELDS = [
-    { key: 'xa', symbol: 'Ха', label: 'Avtoturargoh qismi', hint: 'Bino ichidagi avtoturargoh hajmi' },
-    { key: 'xt', symbol: 'Хт', label: 'Texnik qavatlar/inshootlar/xonalar', hint: 'Bino ichidagi texnik qism hajmi' },
-    { key: 'xu', symbol: 'Ху', label: 'Umumiy foydalanishdagi qism', hint: 'Turar-joyning umumiy foydalanish qismi hajmi' },
-] as const
 
 type VolKey = 'xb' | 'xyu' | 'xa' | 'xt' | 'xu'
 
@@ -62,33 +44,41 @@ const fmt = (n: number, dp = 2) =>
     n.toLocaleString('uz-UZ', { minimumFractionDigits: dp, maximumFractionDigits: dp })
 
 const Page = () => {
+    const t = useTranslations('calc')
+
     const [vol, setVol] = useState<Record<VolKey, string>>({
         xb: '', xyu: '', xa: '', xt: '', xu: '',
     })
     const [bhm, setBhm] = useState(String(BHM_2026))
-    const [kt, setKt] = useState(KT_OPTIONS[0].value)
-    const [koIdx, setKoIdx] = useState(3)
-    const [kz, setKz] = useState(KZ_OPTIONS[1].value)
+    const [kt, setKt] = useState(KT[0].v)
+    const [koIdx, setKoIdx] = useState(0)
+    const [kz, setKz] = useState(KZ[1].v)
     const [kzInfo, setKzInfo] = useState<string | null>(null)
-    const [kzh, setKzh] = useState(KZH_OPTIONS[0].value)
-    const [showExempt, setShowExempt] = useState(false)
+    const [kzAssumed, setKzAssumed] = useState(false)
+    const [kzh, setKzh] = useState(KZH[0].v)
+    const [showBreakdown, setShowBreakdown] = useState(false)
 
-    const ko = KO_OPTIONS[koIdx].value
+    const ko = KO[koIdx].v
     const num = (s: string) => parseFloat(s) || 0
+
+    const ktOptions = KT.map((o) => ({ value: o.v, label: t(o.k) }))
+    const koOptions = KO.map((o, i) => ({ value: i, label: t(o.k) }))
+    const kzOptions = KZ.map((o) => ({ value: o.v, label: `${t(o.k)} (${o.v})` }))
+    const kzhOptions = KZH.map((o) => ({ value: o.v, label: t(o.k) }))
 
     const calc = useMemo(() => {
         const bhmV = num(bhm)
         const positive = num(vol.xb) + num(vol.xyu)
         const negative = num(vol.xa) + num(vol.xt) + num(vol.xu)
-        const netVolume = positive - negative
-        const clampedVolume = Math.max(0, netVolume)
+        const clampedVolume = Math.max(0, positive - negative)
         const rawK = kt * ko * kz * kzh
-        const floored = rawK < 0.01
-        const effK = floored ? 0.01 : rawK
+        const effK = rawK < 0.01 ? 0.01 : rawK
         return {
-            bhmV, positive, negative, netVolume, clampedVolume,
-            rawK, effK, floored, total: bhmV * clampedVolume * effK,
-            negativeVolume: netVolume < 0,
+            bhmV, positive, negative, clampedVolume, rawK, effK,
+            floored: rawK < 0.01,
+            total: bhmV * clampedVolume * effK,
+            negativeVolume: positive - negative < 0,
+            empty: positive === 0,
         }
     }, [bhm, vol, kt, ko, kz, kzh])
 
@@ -99,342 +89,299 @@ const Page = () => {
     const handleResolved = (loc: ResolvedLocation) => {
         if (!loc.matched) return
         setKz(loc.kzValue)
-        if (loc.assumed) {
-            setKzInfo(
-                `${loc.detectedName || 'Kichik aholi punkti'} — bazada yo‘q, kichik punkt deb olindi → Кз=${loc.kzValue}. Kerak bo‘lsa qo‘lda o‘zgartiring.`
-            )
-        } else {
-            setKzInfo(
-                `${loc.city} — aholi ~${fmt(loc.population || 0, 0)} (${loc.populationYear}) → Кз=${loc.kzValue}`
-            )
-        }
+        setKzAssumed(!!loc.assumed)
+        setKzInfo(
+            loc.assumed
+                ? t('kzAssumed', { name: loc.detectedName || '—', kz: loc.kzValue })
+                : t('kzResolved', {
+                      city: loc.city || '',
+                      pop: fmt(loc.population || 0, 0),
+                      kz: loc.kzValue,
+                  })
+        )
     }
 
     const reset = () => {
         setVol({ xb: '', xyu: '', xa: '', xt: '', xu: '' })
         setBhm(String(BHM_2026))
-        setKt(KT_OPTIONS[0].value)
-        setKoIdx(3)
-        setKz(KZ_OPTIONS[1].value)
+        setKt(KT[0].v)
+        setKoIdx(0)
+        setKz(KZ[1].v)
         setKzInfo(null)
-        setKzh(KZH_OPTIONS[0].value)
+        setKzAssumed(false)
+        setKzh(KZH[0].v)
     }
 
-    const inputCls =
-        'w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all'
-    const selectCls = inputCls + ' bg-white text-gray-800'
-    const card = 'bg-white rounded-2xl shadow-xl p-6 md:p-8'
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 md:p-8">
-            <div className="max-w-4xl mx-auto space-y-6">
+        <div className="min-h-screen bg-slate-50 py-8 px-4">
+            <div className="max-w-2xl mx-auto">
                 {/* Sarlavha */}
-                <div className={card}>
-                    <div className="flex items-center gap-4">
-                        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-3 rounded-xl shrink-0">
-                            <Calculator className="w-8 h-8 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-                                Infratuzilma yig‘imi kalkulyatori
-                            </h1>
-                            <p className="text-gray-600 text-sm md:text-base mt-1">
-                                VM 151-son qarori (08.04.2026) bo‘yicha
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 1. Joylashuv (Кз) */}
-                <div className={card}>
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">
-                        1. Qurilish joyi
-                    </h2>
-                    <LocationPicker onResolve={handleResolved} />
-                    <div className="mt-4 grid md:grid-cols-2 gap-4 items-end">
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-semibold text-gray-700">
-                                Hududiy zona (Кз)
-                            </label>
-                            <select
-                                className={selectCls}
-                                value={kz}
-                                onChange={(e) => {
-                                    setKz(Number(e.target.value))
-                                    setKzInfo(null)
-                                }}
-                            >
-                                {KZ_OPTIONS.map((o) => (
-                                    <option key={o.value} value={o.value}>
-                                        {o.label} — {o.value}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        {kzInfo && (
-                            <div className="flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2.5 text-sm text-green-800">
-                                <MapPin className="w-4 h-4 shrink-0" />
-                                {kzInfo}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* 2. Hajmlar */}
-                <div className={card}>
-                    <h2 className="text-xl font-bold text-gray-800 mb-1">
-                        2. Hajm ma‘lumotlari (m³)
-                    </h2>
-                    <p className="text-sm text-gray-500 mb-5">
-                        Qurilish hajmlarini kub metrda kiriting.
+                <div className="text-center mb-6">
+                    <h1 className="text-2xl md:text-3xl font-bold text-slate-800">{t('title')}</h1>
+                    <p className="text-slate-500 text-sm mt-1">
+                        {t('subtitle')} ·{' '}
+                        <a
+                            href="https://lex.uz/docs/8126388"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline font-medium"
+                        >
+                            {t('resolution')}
+                        </a>
                     </p>
-                    <div className="grid md:grid-cols-2 gap-5">
-                        {ADD_FIELDS.map((f) => (
-                            <VolInput
-                                key={f.key}
-                                f={f}
-                                value={vol[f.key]}
-                                onChange={(v) => onVol(f.key, v)}
-                                cls={inputCls}
-                                positive
-                            />
-                        ))}
-                    </div>
-
-                    <div className="mt-6 rounded-xl border-2 border-dashed border-gray-200 p-4">
-                        <div className="flex items-start gap-2 mb-4">
-                            <Info className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
-                            <p className="text-sm text-gray-600">
-                                Quyidagi qismlar <b>bino umumiy hajmi (Хб) ichida</b>{' '}
-                                bo‘lib, yig‘imdan <b>ayiriladi</b>. Agar bunday
-                                qismlar bo‘lmasa — 0 qoldiring.
-                            </p>
-                        </div>
-                        <div className="grid md:grid-cols-3 gap-5">
-                            {SUB_FIELDS.map((f) => (
-                                <VolInput
-                                    key={f.key}
-                                    f={f}
-                                    value={vol[f.key]}
-                                    onChange={(v) => onVol(f.key, v)}
-                                    cls={inputCls}
-                                    positive={false}
-                                />
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="mt-5 space-y-1.5 max-w-xs">
-                        <label className="text-sm font-semibold text-gray-700">
-                            BHM (bazaviy hisoblash miqdori), so‘m
-                        </label>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={bhm}
-                            onChange={(e) =>
-                                (e.target.value === '' || /^\d*$/.test(e.target.value)) &&
-                                setBhm(e.target.value)
-                            }
-                            className={inputCls}
-                        />
-                        <p className="text-xs text-gray-500">
-                            2026: {fmt(BHM_2026, 0)} so‘m · oldingi: {fmt(BHM_2025, 0)}
-                        </p>
-                    </div>
                 </div>
 
-                {/* 3. Koeffitsientlar */}
-                <div className={card}>
-                    <h2 className="text-xl font-bold text-gray-800 mb-5">
-                        3. Koeffitsientlar
-                    </h2>
-                    <div className="grid md:grid-cols-2 gap-5">
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-semibold text-gray-700">
-                                Qurilish turi (Кт)
-                            </label>
-                            <select
-                                className={selectCls}
-                                value={kt}
-                                onChange={(e) => setKt(Number(e.target.value))}
-                            >
-                                {KT_OPTIONS.map((o) => (
-                                    <option key={o.value} value={o.value}>
-                                        {o.label} — {o.value}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-semibold text-gray-700">
-                                Obyekt turi (Ко)
-                            </label>
-                            <select
-                                className={selectCls}
-                                value={koIdx}
-                                onChange={(e) => setKoIdx(Number(e.target.value))}
-                            >
-                                {KO_OPTIONS.map((o, i) => (
-                                    <option key={i} value={i}>
-                                        {o.label} — {o.value}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="space-y-1.5 md:col-span-2">
-                            <label className="text-sm font-semibold text-gray-700">
-                                Obyekt joylashuvi (Кж)
-                            </label>
-                            <select
-                                className={selectCls}
-                                value={kzh}
-                                onChange={(e) => setKzh(Number(e.target.value))}
-                            >
-                                {KZH_OPTIONS.map((o) => (
-                                    <option key={o.value} value={o.value}>
-                                        {o.label} — {o.value}
-                                    </option>
-                                ))}
-                            </select>
-                            <p className="text-xs text-amber-600 flex items-start gap-1">
-                                <Info className="w-3 h-3 mt-0.5 shrink-0" />
-                                Markaziy qatnov ko‘chasi ma‘lumotini xaritadan
-                                avtomatik aniqlab bo‘lmaydi — obyekt joylashuvini
-                                o‘zingiz tanlang.
+                {/* Kirish yo'riqnomasi */}
+                <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 mb-6 flex gap-3">
+                    <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                    <p className="text-sm text-blue-900 leading-relaxed">{t('intro')}</p>
+                </div>
+
+                <div className="space-y-5">
+                    {/* 1. Joy */}
+                    <Card step={1} title={t('step1')}>
+                        <LocationPicker onResolve={handleResolved} />
+                        {kzInfo && (
+                            <p className={`mt-3 flex items-start gap-1.5 rounded-lg px-3 py-2 text-sm ${
+                                kzAssumed ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+                            }`}>
+                                <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                                {kzInfo}
                             </p>
+                        )}
+                        <div className="mt-3">
+                            <Label help={t('zoneHelp')}>{t('zoneLabel')} (Кз)</Label>
+                            <Select
+                                value={kz}
+                                onChange={(v) => { setKz(v); setKzInfo(null); setKzAssumed(false) }}
+                                options={kzOptions}
+                            />
                         </div>
-                    </div>
-                    <button
-                        onClick={reset}
-                        className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50"
-                    >
-                        <RefreshCw className="w-4 h-4" /> Tozalash
-                    </button>
+                    </Card>
+
+                    {/* 2. Hajmlar */}
+                    <Card step={2} title={t('step2')}>
+                        <NumField label={t('xbLabel')} help={t('xbHelp')} value={vol.xb} onChange={(v) => onVol('xb', v)} unit="m³" big sign="+" />
+                        <div className="mt-4">
+                            <NumField label={t('xyuLabel')} help={t('xyuHelp')} value={vol.xyu} onChange={(v) => onVol('xyu', v)} unit="m³" sign="+" />
+                        </div>
+
+                        <div className="mt-5 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                            <p className="flex items-start gap-2 text-sm text-slate-600 mb-4">
+                                <Info className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+                                {t('deductNote')}
+                            </p>
+                            <div className="space-y-4">
+                                <NumField label={t('xaLabel')} help={t('xaHelp')} value={vol.xa} onChange={(v) => onVol('xa', v)} unit="m³" sign="−" />
+                                <NumField label={t('xtLabel')} help={t('xtHelp')} value={vol.xt} onChange={(v) => onVol('xt', v)} unit="m³" sign="−" />
+                                <NumField label={t('xuLabel')} help={t('xuHelp')} value={vol.xu} onChange={(v) => onVol('xu', v)} unit="m³" sign="−" />
+                            </div>
+                        </div>
+
+                        <div className="mt-5 max-w-xs">
+                            <Label help={t('bhmHelp', { prev: fmt(BHM_2025, 0) })}>{t('bhmLabel')}</Label>
+                            <NumField value={bhm} onChange={(v) => (v === '' || /^\d*$/.test(v)) && setBhm(v)} unit={t('currency')} />
+                        </div>
+                    </Card>
+
+                    {/* 3. Obyekt */}
+                    <Card step={3} title={t('step3')}>
+                        <div className="space-y-5">
+                            <div>
+                                <Label>{t('ktLabel')}</Label>
+                                <Segmented value={kt} onChange={setKt} options={ktOptions} />
+                            </div>
+                            <div>
+                                <Label>{t('koLabel')}</Label>
+                                <Select value={koIdx} onChange={setKoIdx} options={koOptions} />
+                            </div>
+                            <div>
+                                <Label help={t('kzhHelp')}>{t('kzhLabel')}</Label>
+                                <Segmented value={kzh} onChange={setKzh} options={kzhOptions} />
+                            </div>
+                        </div>
+                    </Card>
                 </div>
 
                 {/* Natija */}
-                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                    <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-6 md:p-8 text-white">
-                        <h3 className="text-lg font-semibold opacity-90">
-                            Hisoblangan yig‘im miqdori
-                        </h3>
-                        <div className="text-4xl md:text-5xl font-bold mt-1">
-                            {fmt(calc.total)} so‘m
-                        </div>
-                        {calc.negativeVolume && (
-                            <p className="mt-2 text-sm bg-white/20 rounded px-3 py-1 inline-block">
-                                ⚠️ Ayiriladigan qismlar umumiy hajmdan katta — hajm 0 olindi.
-                            </p>
-                        )}
+                <div className="mt-6 rounded-2xl bg-[#0A0A3D] text-white p-6 shadow-lg">
+                    <p className="text-sm text-blue-200/80">{t('resultLabel')}</p>
+                    <div className="mt-1 text-4xl font-bold tabular-nums">
+                        {fmt(calc.total)}
+                        <span className="text-xl font-medium text-blue-200/70"> {t('currency')}</span>
                     </div>
-                    <div className="p-6 md:p-8 space-y-2 text-sm">
-                        <h4 className="font-bold text-gray-800 mb-3">Hisob-kitob</h4>
-                        <Row
-                            k="Sof hajm = (Хб+Хю) − (Ха+Хт+Ху)"
-                            v={`(${fmt(calc.positive)} − ${fmt(calc.negative)}) = ${fmt(calc.clampedVolume)} m³`}
-                        />
-                        <Row
-                            k="Koeffitsientlar Кт×Ко×Кз×Кж"
-                            v={`${kt} × ${ko} × ${kz} × ${kzh} = ${fmt(calc.rawK, 4)}`}
-                        />
-                        {calc.floored && (
-                            <Row
-                                k="0.01 minimum qoidasi"
-                                v={`${fmt(calc.rawK, 4)} < 0.01 → 0.01`}
-                                warn
-                            />
-                        )}
-                        <Row k="BHM" v={`${fmt(calc.bhmV, 0)} so‘m`} />
-                        <div className="border-t pt-2 mt-2" />
-                        <Row
-                            k="Yig‘im = BHM × sof hajm × koeffitsient"
-                            v={`${fmt(calc.bhmV, 0)} × ${fmt(calc.clampedVolume)} × ${fmt(calc.effK, 4)} = ${fmt(calc.total)} so‘m`}
-                            bold
-                        />
-                    </div>
-                </div>
-
-                {/* Undirilmaydigan holatlar */}
-                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    {calc.empty && <p className="mt-2 text-sm text-blue-200/70">{t('emptyHint')}</p>}
+                    {calc.negativeVolume && (
+                        <p className="mt-2 text-sm bg-white/10 rounded-lg px-3 py-2">⚠️ {t('negativeWarn')}</p>
+                    )}
                     <button
-                        onClick={() => setShowExempt((s) => !s)}
-                        className="w-full flex items-center justify-between p-5 text-left font-semibold text-gray-800"
+                        onClick={() => setShowBreakdown((s) => !s)}
+                        className="mt-4 inline-flex items-center gap-1.5 text-sm text-blue-200 hover:text-white"
                     >
-                        <span>Yig‘im undirilmaydigan holatlar</span>
-                        <ChevronDown className={`w-5 h-5 transition-transform ${showExempt ? 'rotate-180' : ''}`} />
+                        {t('showBreakdown')}
+                        <ChevronDown className={`h-4 w-4 transition-transform ${showBreakdown ? 'rotate-180' : ''}`} />
                     </button>
-                    {showExempt && (
-                        <ul className="px-6 pb-6 space-y-2 text-sm text-gray-600 list-disc list-inside">
-                            <li>Renovatsiya kompensatsiyasi sifatidagi bino va inshootlar;</li>
-                            <li>Davlatga bepul topshiriladigan bino va inshootlar;</li>
-                            <li>Qurilish hajmining 50%+ qismi davlatga bepul topshiriladigan obyektlar;</li>
-                            <li>Fuqarolar o‘zini o‘zi boshqarish (mahalla) binolari;</li>
-                            <li>Muhandislik-kommunikatsiya va transport infratuzilmasi obyektlari;</li>
-                            <li>Sanoat kapital binolari (umumiy ovqatlanish, sport zali, ofis, turar joy bundan mustasno);</li>
-                            <li>Diniy maqsadli binolar.</li>
-                        </ul>
+                    {showBreakdown && (
+                        <div className="mt-3 pt-3 border-t border-white/10 space-y-2 text-sm">
+                            <BRow k={t('brNet')} v={fmt(calc.clampedVolume)} />
+                            <BRow k={t('brCoef')} v={fmt(calc.rawK, 4)} />
+                            {calc.floored && <BRow k={t('brMin')} v={t('brApplied')} warn />}
+                            <BRow k={t('brBhm')} v={`${fmt(calc.bhmV, 0)} ${t('currency')}`} />
+                            <p className="pt-1 text-[11px] text-blue-200/60">
+                                {fmt(calc.bhmV, 0)} × {fmt(calc.clampedVolume, 0)} × {fmt(calc.effK, 4)}
+                            </p>
+                        </div>
                     )}
                 </div>
 
-                <p className="text-center text-xs text-gray-400 pb-4">
-                    Asos: VM 151-son qarori (08.04.2026), 4-ilova Nizomi 2-ilovasi.
-                    Natija ma‘lumot uchun; rasmiy yig‘im ekspertiza xulosasi asosida hisoblanadi.
+                <div className="mt-4">
+                    <button onClick={reset} className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-700">
+                        <RefreshCw className="h-4 w-4" /> {t('reset')}
+                    </button>
+                </div>
+
+                {/* Undirilmaydigan holatlar */}
+                <div className="mt-5 rounded-2xl bg-white border border-slate-200 p-5">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3">{t('exemptTitle')}</h3>
+                    <ul className="space-y-1.5 text-xs text-slate-500 list-disc list-inside">
+                        {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                            <li key={i}>{t(`exempt${i}`)}</li>
+                        ))}
+                    </ul>
+                </div>
+
+                <p className="mt-6 text-center text-xs text-slate-400 leading-relaxed">
+                    {t('disclaimer')}{' '}
+                    <a href="https://lex.uz/docs/8126388" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                        {t('resolution')}
+                    </a>.
                 </p>
             </div>
         </div>
     )
 }
 
-function VolInput({
-    f,
-    value,
-    onChange,
-    cls,
-    positive,
-}: {
-    f: { symbol: string; label: string; hint: string }
-    value: string
-    onChange: (v: string) => void
-    cls: string
-    positive?: boolean
-}) {
+// ─── UI komponentlar ───
+
+function Card({ step, title, children }: { step: number; title: string; children: React.ReactNode }) {
     return (
-        <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                {positive !== undefined && (
-                    <span
-                        className={`inline-flex h-5 w-5 items-center justify-center rounded text-xs font-bold ${
-                            positive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}
-                    >
-                        {positive ? '+' : '−'}
-                    </span>
-                )}
-                {f.label} <span className="text-gray-400">({f.symbol})</span>
-            </label>
-            <input
-                type="text"
-                inputMode="decimal"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder="0"
-                className={cls}
-            />
-            <p className="text-xs text-gray-500">{f.hint}</p>
+        <section className="rounded-2xl bg-white border border-slate-200 p-5 md:p-6">
+            <div className="flex items-center gap-3 mb-4">
+                <span className="grid place-items-center h-7 w-7 rounded-full bg-[#0A0A3D] text-white text-sm font-bold shrink-0">{step}</span>
+                <h2 className="text-base md:text-lg font-bold text-slate-800">{title}</h2>
+            </div>
+            {children}
+        </section>
+    )
+}
+
+function Label({ children, help }: { children: React.ReactNode; help?: string }) {
+    return (
+        <div className="mb-1.5">
+            <label className="block text-sm font-semibold text-slate-700">{children}</label>
+            {help && <p className="text-xs text-slate-400 mt-0.5">{help}</p>}
         </div>
     )
 }
 
-function Row({ k, v, bold, warn }: { k: string; v: string; bold?: boolean; warn?: boolean }) {
+function NumField({
+    label, help, value, onChange, unit, big, sign,
+}: {
+    label?: string
+    help?: string
+    value: string
+    onChange: (v: string) => void
+    unit: string
+    big?: boolean
+    sign?: '+' | '−'
+}) {
     return (
-        <div
-            className={`flex flex-col sm:flex-row sm:justify-between gap-1 ${
-                bold ? 'font-bold text-gray-900' : 'text-gray-600'
-            } ${warn ? 'text-amber-600' : ''}`}
-        >
-            <span>{k}</span>
-            <span className="sm:text-right">{v}</span>
+        <div>
+            {label && (
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-1">
+                    {sign && (
+                        <span className={`inline-grid place-items-center h-5 w-5 rounded text-xs font-bold ${
+                            sign === '+' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600'
+                        }`}>{sign}</span>
+                    )}
+                    {label}
+                </label>
+            )}
+            {help && <p className="text-xs text-slate-400 mb-1.5">{help}</p>}
+            <div className="relative">
+                <input
+                    type="text"
+                    inputMode="decimal"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder="0"
+                    className={`w-full rounded-lg border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition tabular-nums ${
+                        big ? 'pl-4 pr-14 py-3.5 text-xl' : 'pl-3 pr-12 py-2.5'
+                    }`}
+                />
+                <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none ${big ? 'text-base' : 'text-sm'}`}>
+                    {unit}
+                </span>
+            </div>
+        </div>
+    )
+}
+
+function Select<T extends number>({
+    value, onChange, options,
+}: {
+    value: T
+    onChange: (v: T) => void
+    options: { value: T; label: string }[]
+}) {
+    return (
+        <div className="relative">
+            <select
+                value={value}
+                onChange={(e) => onChange(Number(e.target.value) as T)}
+                className="w-full appearance-none pl-3 pr-9 py-2.5 rounded-lg border-2 border-slate-200 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition text-slate-800 text-sm"
+            >
+                {options.map((o, i) => (
+                    <option key={i} value={o.value}>{o.label}</option>
+                ))}
+            </select>
+            <ChevronDown className="h-4 w-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+    )
+}
+
+function Segmented<T extends number>({
+    value, onChange, options,
+}: {
+    value: T
+    onChange: (v: T) => void
+    options: { value: T; label: string }[]
+}) {
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {options.map((o, i) => {
+                const active = value === o.value
+                return (
+                    <button
+                        key={i}
+                        onClick={() => onChange(o.value)}
+                        className={`rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition text-center ${
+                            active ? 'border-[#0A0A3D] bg-[#0A0A3D] text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        }`}
+                    >
+                        {o.label}
+                    </button>
+                )
+            })}
+        </div>
+    )
+}
+
+function BRow({ k, v, warn }: { k: string; v: string; warn?: boolean }) {
+    return (
+        <div className="flex justify-between gap-3">
+            <span className="text-blue-200/70">{k}</span>
+            <span className={`tabular-nums ${warn ? 'text-amber-300' : 'text-white'}`}>{v}</span>
         </div>
     )
 }

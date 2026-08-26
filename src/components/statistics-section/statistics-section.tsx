@@ -168,12 +168,7 @@ const StatisticsSection = () => {
                                 type: 'spring',
                                 damping: 12,
                             }}
-                            whileHover={{
-                                scale: 1.05,
-                                y: -10,
-                                transition: { duration: 0.3 },
-                            }}
-                            className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:border-white/40 transition-all duration-300 group cursor-pointer"
+                            className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 transition-all duration-300 group"
                         >
                             <div className="flex items-start gap-4">
                                 <motion.div
