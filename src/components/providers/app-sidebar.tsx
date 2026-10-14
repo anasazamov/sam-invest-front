@@ -6,6 +6,10 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { useNavItems } from '@/components/header/use-nav-items'
+import { pick } from '@/lib/blocks'
+import { useSiteSettings } from '@/lib/site-settings'
+import { resolveSocialLinks } from '@/lib/social-links'
 import { api } from '@/models/axios'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
@@ -43,6 +47,9 @@ export function AppSidebar() {
   const [activeMenu, setActiveMenu] = useState<number | null>(null)
   const { setOpenMobile } = useSidebar()
   const locale = useLocale()
+  const { data: site } = useSiteSettings()
+  const customLogo = site?.logoDark || site?.logoLight
+  const siteName = pick(site?.siteName, locale)
 
   const detailsData = useQuery({
     queryKey: ['details'],
@@ -51,54 +58,10 @@ export function AppSidebar() {
       return res.data
     },
   })
+  const social = resolveSocialLinks(detailsData.data)
 
-  const menus = useQuery({
-    queryKey: ['menus'],
-    queryFn: async () => {
-      const res = await api.get('/menu')
-      return res.data
-    },
-  })
-
-  const menuItems = [
-    {
-      title: t('Bosh sahifa'),
-      items: { default: '/' },
-      hasSubMenu: false,
-    },
-
-    ...(menus.data?.map((menu: any) => ({
-      title: menu.name?.[locale] || menu.name?.uz || t('Nomalum'),
-      hasSubMenu: true,
-
-      items: {
-        default: `/${menu.slug}`,
-        ...(menu.submenus?.reduce(
-          (acc: Record<string, string>, submenu: any) => {
-            const submenuTitle =
-              submenu.name?.[locale] || submenu.name?.uz || t('Nomalum')
-            acc[submenuTitle] = `/${menu.slug}/${submenu.slug}`
-            return acc
-          },
-          {}
-        ) || {}),
-      },
-    })) || []),
-    {
-      title: t('Kalkulyator'),
-      items: { default: '/calc' },
-      hasSubMenu: false,
-    },
-    {
-      title: t('Matbuot'),
-      items: {
-        default: '',
-        Foto: '/galereya/rasmlar',
-        Video: '/galereya/videolar',
-      },
-      hasSubMenu: true,
-    },
-  ]
+  // Header bilan bir xil ro'yxat (admin → "Dizayn" → "Header")
+  const menuItems = useNavItems()
   return (
     <Sidebar className="border-r-0">
       <SidebarHeader className="bg-[#0A0A3D] pt-12 pb-6 px-6 border-b border-white/10">
@@ -109,20 +72,35 @@ export function AppSidebar() {
         >
           <Link href="/" className="flex flex-col items-center gap-2">
             <div className="relative  ">
-              <Image
-                src={logo}
-                alt="Logo"
-                width={90}
-                height={90}
-                className="object-contain"
-              />
+              {customLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={customLogo}
+                  alt={siteName || 'Logo'}
+                  className="h-[90px] w-auto object-contain"
+                />
+              ) : (
+                <Image
+                  src={logo}
+                  alt="Logo"
+                  width={90}
+                  height={90}
+                  className="object-contain"
+                />
+              )}
             </div>
-            <h1 className="text-sm font-bold text-white text-center leading-tight tracking-wide uppercase">
-              Samarqand <br />
-              <span className="text-blue-400 font-medium normal-case block mt-1 opacity-80">
-                Invest kompaniyasi
-              </span>
-            </h1>
+            {siteName ? (
+              <h1 className="text-sm font-bold text-white text-center leading-tight tracking-wide">
+                {siteName}
+              </h1>
+            ) : (
+              <h1 className="text-sm font-bold text-white text-center leading-tight tracking-wide uppercase">
+                Samarqand <br />
+                <span className="text-blue-400 font-medium normal-case block mt-1 opacity-80">
+                  Invest kompaniyasi
+                </span>
+              </h1>
+            )}
           </Link>
         </motion.div>
       </SidebarHeader>
@@ -236,28 +214,20 @@ export function AppSidebar() {
         <p className="text-[10px] text-white/40 uppercase tracking-[2px] text-center mb-4">
           {t('Ijtimoiy tarmoqlar')}
         </p>
+        {/* Havolalar admin → "Asosiy ma'lumotlar"dan (saqlanmagan bo'lsa — standart) */}
         <div className="flex justify-center gap-3">
-          <SocialIcon
-            icon={<Send size={18} />}
-            color="hover:bg-sky-500"
-            href="https://t.me/samarqandinvestkompaniyasi"
-          />
-
-          <SocialIcon
-            icon={<Facebook size={18} />}
-            color="hover:bg-blue-600"
-            href="https://www.facebook.com/share/14QfpykKKVz/"
-          />
-          <SocialIcon
-            icon={<Instagram size={18} />}
-            color="hover:bg-pink-600"
-            href="https://www.instagram.com/saminvestcom?igsh=b25jZGg5MjJkbTF6"
-          />
-          <SocialIcon
-            icon={<Youtube size={18} />}
-            color="hover:bg-red-600"
-            href="https://youtube.com/@samarqandinvestkompaniyasi?si=3vENpZ2DfUkx22yB"
-          />
+          {social.telegram && (
+            <SocialIcon icon={<Send size={18} />} color="hover:bg-sky-500" href={social.telegram} />
+          )}
+          {social.facebook && (
+            <SocialIcon icon={<Facebook size={18} />} color="hover:bg-blue-600" href={social.facebook} />
+          )}
+          {social.instagram && (
+            <SocialIcon icon={<Instagram size={18} />} color="hover:bg-pink-600" href={social.instagram} />
+          )}
+          {social.youtube && (
+            <SocialIcon icon={<Youtube size={18} />} color="hover:bg-red-600" href={social.youtube} />
+          )}
         </div>
       </SidebarFooter>
     </Sidebar>
@@ -315,6 +285,8 @@ function SocialIcon({
   return (
     <motion.a
       href={href}
+      target="_blank"
+      rel="noopener noreferrer"
       whileHover={{ y: -4, scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
       className={`w-10 h-10 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white transition-all ${color}`}

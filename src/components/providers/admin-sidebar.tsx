@@ -10,12 +10,15 @@ import {
 } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import {
+    BarChart3,
     ChevronRight,
     Database,
     Folder,
+    FolderOpen,
     Image,
     LayoutTemplate,
     Newspaper,
+    Palette,
 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
@@ -39,6 +42,21 @@ export async function AdminSidebar() {
             title: t('Galereya'),
             url: '/admin/galereya',
             icon: Image,
+        },
+        {
+            title: t('Statistika'),
+            url: '/admin/statistika',
+            icon: BarChart3,
+        },
+        {
+            title: t('Fayl menejeri'),
+            url: '/admin/fayllar',
+            icon: FolderOpen,
+        },
+        {
+            title: t('Dizayn'),
+            url: '/admin/dizayn',
+            icon: Palette,
         },
     ]
 

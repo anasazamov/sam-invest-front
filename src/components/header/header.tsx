@@ -1,66 +1,17 @@
 'use client'
 
-import { api } from '@/models/axios'
-import { useQuery } from '@tanstack/react-query'
 import { ChevronDown } from 'lucide-react'
-import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
 import { LanguageSwitcher } from '../language-switcher/language-switcher'
 import { ModeToggle } from '../mode-toggle/mode-toggle'
 import { SidebarTrigger } from '../ui/sidebar'
+import { useNavItems } from './use-nav-items'
 
 const Header = () => {
   const [activeMenu, setActiveMenu] = useState<number | null>(null)
-  const locale = useLocale()
-  const t = useTranslations()
-  const menus = useQuery({
-    queryKey: ['menus'],
-    queryFn: async () => {
-      const res = await api.get('/menu')
-      return res.data
-    },
-  })
-
-  const menuItems = [
-    {
-      title: t('Bosh sahifa'),
-      items: { default: '/' },
-      hasSubMenu: false,
-    },
-
-    ...(menus.data?.map((menu: any) => ({
-      title: menu.name?.[locale] || menu.name?.uz || t('Nomalum'),
-      hasSubMenu: true,
-
-      items: {
-        default: `/${menu.slug}`,
-        ...(menu.submenus?.reduce(
-          (acc: Record<string, string>, submenu: any) => {
-            const submenuTitle =
-              submenu.name?.[locale] || submenu.name?.uz || t('Nomalum')
-            acc[submenuTitle] = `/${menu.slug}/${submenu.slug}`
-            return acc
-          },
-          {}
-        ) || {}),
-      },
-    })) || []),
-    {
-      title: t('Kalkulyator'),
-      items: { default: '/calc' },
-      hasSubMenu: false,
-    },
-    {
-      title: t('Matbuot'),
-      items: {
-        default: '',
-        Foto: '/galereya/rasmlar',
-        Video: '/galereya/videolar',
-      },
-      hasSubMenu: true,
-    },
-  ]
+  // Ro'yxat admin → "Dizayn" → "Header" sozlamalari bo'yicha (use-nav-items.ts)
+  const menuItems = useNavItems()
 
   return (
     <div className="sticky top-0 z-50 w-full bg-[#0A0A3D] text-white">

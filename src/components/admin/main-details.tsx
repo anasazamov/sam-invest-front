@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import useNotify from '@/hooks/use-notify'
+import { resolveSocialLinks } from '@/lib/social-links'
 import { api } from '@/models/axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Asterisk, Loader2, Plus, Save, Trash2 } from 'lucide-react'
@@ -25,18 +26,31 @@ const LANGUAGES = [
     { key: 'en', label: 'English' },
 ] as const
 
+type Localized = { uz: string; oz: string; ru: string; en: string }
+type SocialLinks = {
+    telegram: string
+    facebook: string
+    instagram: string
+    youtube: string
+}
+
 type FormValues = {
     receptionPhone: string
     infoEmails: string
     trustLinePhones: string[]
     corporateEmails: string[]
-    workingHours: {
-        uz: string
-        oz: string
-        ru: string
-        en: string
-    }
+    workingHours: Localized
+    address: Localized
+    socialLinks: SocialLinks
+    mapCoords: { lat: string; lng: string }
 }
+
+const SOCIALS: { key: keyof SocialLinks; label: string; ph: string }[] = [
+    { key: 'telegram', label: 'Telegram', ph: 'https://t.me/...' },
+    { key: 'facebook', label: 'Facebook', ph: 'https://facebook.com/...' },
+    { key: 'instagram', label: 'Instagram', ph: 'https://instagram.com/...' },
+    { key: 'youtube', label: 'YouTube', ph: 'https://youtube.com/...' },
+]
 
 const MainDetails = () => {
     const { toastSuccess, toastError } = useNotify()
@@ -49,6 +63,9 @@ const MainDetails = () => {
         trustLinePhones: [''],
         corporateEmails: [''],
         workingHours: { uz: '', oz: '', ru: '', en: '' },
+        address: { uz: '', oz: '', ru: '', en: '' },
+        socialLinks: { telegram: '', facebook: '', instagram: '', youtube: '' },
+        mapCoords: { lat: '', lng: '' },
     })
 
     const details = useQuery({
@@ -89,6 +106,18 @@ const MainDetails = () => {
                     ru: String(details.data.workingHours?.ru || ''),
                     en: String(details.data.workingHours?.en || ''),
                 },
+                address: {
+                    uz: String(details.data.address?.uz || ''),
+                    oz: String(details.data.address?.oz || ''),
+                    ru: String(details.data.address?.ru || ''),
+                    en: String(details.data.address?.en || ''),
+                },
+                // Saqlanmagan bo'lsa — saytda ko'rinayotgan standart havolalar
+                socialLinks: resolveSocialLinks(details.data),
+                mapCoords: {
+                    lat: String((details.data as any).mapCoords?.lat ?? ''),
+                    lng: String((details.data as any).mapCoords?.lng ?? ''),
+                },
             })
         }
     }, [details.data])
@@ -106,6 +135,27 @@ const MainDetails = () => {
         setFormData(prev => ({
             ...prev,
             workingHours: { ...prev.workingHours, [lang]: value }
+        }))
+    }
+
+    const handleAddressChange = (lang: keyof Localized, value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            address: { ...prev.address, [lang]: value }
+        }))
+    }
+
+    const handleSocialChange = (key: keyof SocialLinks, value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            socialLinks: { ...prev.socialLinks, [key]: value }
+        }))
+    }
+
+    const handleMapChange = (key: 'lat' | 'lng', value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            mapCoords: { ...prev.mapCoords, [key]: value }
         }))
     }
 
@@ -282,6 +332,77 @@ const MainDetails = () => {
                                 </TabsContent>
                             ))}
                         </Tabs>
+                    </CardContent>
+                </Card>
+
+                <Card className="col-span-2">
+                    <CardHeader>
+                        <CardTitle>{t('Manzil')}</CardTitle>
+                        <CardDescription>{t('All languages are required')}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Tabs defaultValue="uz">
+                            <TabsList>
+                                {LANGUAGES.map((l) => (
+                                    <TabsTrigger key={l.key} value={l.key}>
+                                        {l.label}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                            {LANGUAGES.map((l) => (
+                                <TabsContent key={l.key} value={l.key}>
+                                    <Input
+                                        value={formData.address[l.key]}
+                                        onChange={(e) => handleAddressChange(l.key, e.target.value)}
+                                    />
+                                </TabsContent>
+                            ))}
+                        </Tabs>
+                    </CardContent>
+                </Card>
+
+                <Card className="col-span-2">
+                    <CardHeader>
+                        <CardTitle>{t('Ijtimoiy tarmoqlar')}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {SOCIALS.map((s) => (
+                            <div key={s.key}>
+                                <Label className="pb-2">{s.label}</Label>
+                                <Input
+                                    value={formData.socialLinks[s.key]}
+                                    placeholder={s.ph}
+                                    onChange={(e) => handleSocialChange(s.key, e.target.value)}
+                                />
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+
+                <Card className="col-span-2">
+                    <CardHeader>
+                        <CardTitle>{t('Xarita koordinatalari')}</CardTitle>
+                        <CardDescription>
+                            {t('Xaritada koʻrsatiladigan nuqta (kenglik va uzunlik)')}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Label className="pb-2">Latitude (lat)</Label>
+                            <Input
+                                value={formData.mapCoords.lat}
+                                placeholder="39.657179"
+                                onChange={(e) => handleMapChange('lat', e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <Label className="pb-2">Longitude (lng)</Label>
+                            <Input
+                                value={formData.mapCoords.lng}
+                                placeholder="66.965423"
+                                onChange={(e) => handleMapChange('lng', e.target.value)}
+                            />
+                        </div>
                     </CardContent>
                 </Card>
             </div>

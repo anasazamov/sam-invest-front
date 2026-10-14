@@ -2,6 +2,7 @@
 
 import { AutoForm, FormField } from '@/components/form/auto-form'
 import MyTable, { IColumn } from '@/components/my-table'
+import SortableList from '@/components/admin/sortable-list'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -29,6 +30,7 @@ const AdminMenus = () => {
     const t = useTranslations()
     const [open, setOpen] = useState<boolean>(false)
     const [editing, setEditing] = useState<string | null>(null)
+    const [reordering, setReordering] = useState(false)
     const queryClient = useQueryClient()
     const pathname = usePathname()
     const form = useForm()
@@ -108,6 +110,16 @@ const AdminMenus = () => {
             await queryClient.invalidateQueries({
                 queryKey: ['menus'],
             })
+        },
+    })
+
+    const reorderMenu = useMutation({
+        mutationFn: async (ids: string[]) => {
+            const res = await api.patch('/menu/reorder', { ids })
+            return res.data
+        },
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['menus'] })
         },
     })
 
@@ -249,22 +261,49 @@ const AdminMenus = () => {
 
     return (
         <div className="p-4">
-            <MyTable
-                columns={columns}
-                dataSource={menus.data}
-                rangepickerFilter={false}
-                exportExcel={false}
-                showIndexColumn
-                showDataCount={false}
-                isLoading={menus.isLoading}
-                header={
-                    <div>
-                        <Button size={'sm'} onClick={() => setOpen(true)}>
-                            {t('Menu qoshish')}
+            {reordering ? (
+                <div className="mx-auto max-w-2xl space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold">
+                            {t('Menyularni tartiblash')}
+                        </h2>
+                        <Button size="sm" onClick={() => setReordering(false)}>
+                            {t('Tayyor')}
                         </Button>
                     </div>
-                }
-            />
+                    <SortableList
+                        items={(menus.data ?? []).map((m: any) => ({
+                            id: m.id,
+                            label: m.name?.uz || m.slug,
+                        }))}
+                        onReorder={(ids) => reorderMenu.mutate(ids)}
+                    />
+                </div>
+            ) : (
+                <MyTable
+                    columns={columns}
+                    dataSource={menus.data}
+                    rangepickerFilter={false}
+                    exportExcel={false}
+                    showIndexColumn
+                    showDataCount={false}
+                    isLoading={menus.isLoading}
+                    header={
+                        <div className="flex gap-2">
+                            <Button
+                                size={'sm'}
+                                variant="outline"
+                                onClick={() => setReordering(true)}
+                            >
+                                {t('Tartiblash')}
+                            </Button>
+                            <Button size={'sm'} onClick={() => setOpen(true)}>
+                                {t('Menu qoshish')}
+                            </Button>
+                        </div>
+                    }
+                />
+            )}
 
             <Sheet
                 open={open || !!editing}

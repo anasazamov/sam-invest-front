@@ -1,5 +1,7 @@
 'use client'
 
+import { sanitizeHtml } from '@/lib/sanitize-html'
+import { useSocialLinks } from '@/lib/social-links'
 import { Button } from '@/components/ui/button'
 import { api, baseBackendUrl } from '@/models/axios'
 import { useQuery } from '@tanstack/react-query'
@@ -26,6 +28,7 @@ const PublicationItem = ({ id, tab }: { id: string; tab: string }) => {
     })
 
     const t = useTranslations()
+    const social = useSocialLinks()
     const { data: latestNews } = useQuery({
         queryKey: ['latest-news'],
         queryFn: async () => {
@@ -205,7 +208,7 @@ const PublicationItem = ({ id, tab }: { id: string; tab: string }) => {
                         {(content && content !== '<p></p>' && (
                             <div
                                 dangerouslySetInnerHTML={{
-                                    __html: content,
+                                    __html: sanitizeHtml(content),
                                 }}
                                 className="ql-editor p-0! font-normal text-base md:text-lg leading-relaxed text-foreground/90
                                         **:bg-transparent! **:text-current! wrap-anywhere whitespace-pre-wrap break-words
@@ -282,14 +285,16 @@ const PublicationItem = ({ id, tab }: { id: string; tab: string }) => {
                                     "Eng songgi texnologik yangiliklarni Telegram orqali qabul qiling"
                                 )}
                             </p>
-                            <Button
-                                className="w-full bg-[#432DD7] hover:bg-indigo-800 text-white font-black rounded-xl h-12"
-                                asChild
-                            >
-                                <Link href="https://t.me/samarqandinvestkompaniyasi">
-                                    {t('Telegram Kanal')}
-                                </Link>
-                            </Button>
+                            {social.telegram && (
+                                <Button
+                                    className="w-full bg-[#432DD7] hover:bg-indigo-800 text-white font-black rounded-xl h-12"
+                                    asChild
+                                >
+                                    <Link href={social.telegram} target="_blank" rel="noopener noreferrer">
+                                        {t('Telegram Kanal')}
+                                    </Link>
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </aside>

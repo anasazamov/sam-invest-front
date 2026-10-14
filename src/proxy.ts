@@ -3,7 +3,6 @@ import createMiddleware from 'next-intl/middleware'
 import { cookies } from 'next/headers'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { env } from 'process'
 import { routing } from './i18n/routing'
 import { baseBackendUrl } from './models/axios'
 
@@ -13,7 +12,7 @@ const intlMiddleware = createMiddleware(routing)
 // private route ro‘yxati
 const protectedRoutes = ['/admin']
 
-// Auth + Role middleware
+// Auth middleware — /admin faqat yaroqli token bilan ochiladi (barcha muhitda).
 export async function proxy(req: NextRequest) {
   const cookiesStore = await cookies()
   const res = intlMiddleware(req)
@@ -26,37 +25,31 @@ export async function proxy(req: NextRequest) {
   if (!cookiesStore.get('intl-locale')?.value) {
     cookiesStore.set('intl-locale', 'uz')
   }
+
+  const locale = segments[0] || routing.defaultLocale
+  const loginUrl = new URL(`/${locale}/login`, req.url)
   const matchedRoute = protectedRoutes.find((r) => routePath.startsWith(r))
 
   if (matchedRoute) {
-    if (env.ENV === 'production') {
-      if (!token) {
-        return NextResponse.redirect(new URL('/login', req.url))
+    // Token umuman yo'q — darhol login sahifasiga
+    if (!token) {
+      return NextResponse.redirect(loginUrl)
+    }
+
+    // Token bor — backendda tekshiramiz (imzo + muddat + foydalanuvchi mavjudligi)
+    try {
+      const meRes = await axios.get(`${baseBackendUrl}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+        validateStatus: () => true,
+      })
+
+      if (meRes.status !== 200 && meRes.status !== 201) {
+        return NextResponse.redirect(loginUrl)
       }
 
-      try {
-        const meRes = await axios.get(`${baseBackendUrl}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-
-        if (meRes.status !== 200 && meRes.status !== 201) {
-          return NextResponse.redirect(new URL('/login', req.url))
-        }
-
-        const user = meRes.data
-
-        cookiesStore.set('saminvest-me', JSON.stringify(user))
-
-        if (
-          matchedRoute === '/admin' &&
-          user.username?.toString().toLowerCase().replace('_', '-') !==
-            'admin123'
-        ) {
-          return NextResponse.redirect(new URL('/admin', req.url))
-        }
-      } catch {
-        return NextResponse.redirect(new URL('/login', req.url))
-      }
+      cookiesStore.set('saminvest-me', JSON.stringify(meRes.data))
+    } catch {
+      return NextResponse.redirect(loginUrl)
     }
   }
 

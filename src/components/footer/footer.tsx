@@ -1,5 +1,8 @@
 'use client'
 
+import { pick } from '@/lib/blocks'
+import { useSiteSettings } from '@/lib/site-settings'
+import { resolveSocialLinks } from '@/lib/social-links'
 import { api } from '@/models/axios'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -26,30 +29,52 @@ const Footer = () => {
             return res.data
         },
     })
+    const social = resolveSocialLinks(detailsData.data)
+    const { data: site } = useSiteSettings()
+    // Footer to'q fonda — avval qorong'i (oq) logo variant
+    const customLogo = site?.logoDark || site?.logoLight
+    const siteName = pick(site?.siteName, locale)
+    const footerText = pick(site?.footerText, locale) || t('footer-desc')
+
     return (
         <footer className="bg-[#0A0A3D] py-12 text-white">
             <div className="container-cs px-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
                     <div className="flex flex-col items-center md:items-start gap-6">
                         <div className="relative ">
-                            <Image
-                                src={logo}
-                                alt="Logo"
-                                width={90}
-                                height={90}
-                                className="object-contain"
-                            />
+                            {customLogo ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={customLogo}
+                                    alt={siteName || 'Logo'}
+                                    className="h-[90px] w-auto object-contain"
+                                />
+                            ) : (
+                                <Image
+                                    src={logo}
+                                    alt="Logo"
+                                    width={90}
+                                    height={90}
+                                    className="object-contain"
+                                />
+                            )}
                         </div>
                         <div className="space-y-2">
-                            <h1 className="text-lg font-bold text-center md:text-left leading-tight tracking-wide uppercase">
-                                Samarqand <br />
-                                <span className="text-blue-400 font-medium normal-case block mt-1">
-                                    Invest kompaniyasi
-                                </span>
-                            </h1>
+                            {siteName ? (
+                                <h1 className="text-lg font-bold text-center md:text-left leading-tight tracking-wide">
+                                    {siteName}
+                                </h1>
+                            ) : (
+                                <h1 className="text-lg font-bold text-center md:text-left leading-tight tracking-wide uppercase">
+                                    Samarqand <br />
+                                    <span className="text-blue-400 font-medium normal-case block mt-1">
+                                        Invest kompaniyasi
+                                    </span>
+                                </h1>
+                            )}
                         </div>
                         <p className=" text-white/70 text-center md:text-left max-w-lg leading-relaxed">
-                            {t('footer-desc')}
+                            {footerText}
                         </p>
                     </div>
 
@@ -88,7 +113,7 @@ const Footer = () => {
                             <div className="flex items-center gap-4">
                                 <Mail size={22} className="text-blue-400" />
                                 <a
-                                    href="mailto:info@saminvest.uz"
+                                    href={`mailto:${detailsData.data?.infoEmails || ''}`}
                                     className="text-base hover:text-blue-400 transition-colors"
                                 >
                                     {detailsData.data?.infoEmails}
@@ -101,7 +126,9 @@ const Footer = () => {
                                     className="text-blue-400 shrink-0"
                                 />
                                 <p className="text-base leading-relaxed">
-                                    Samarqand shahri, Ko‘ksaroy maydoni, 1-uy
+                                    {detailsData.data?.address?.[locale] ||
+                                        detailsData.data?.address?.uz ||
+                                        "Samarqand shahri, Ko‘ksaroy maydoni, 2-uy"}
                                 </p>
                             </div>
                         </div>
@@ -120,26 +147,34 @@ const Footer = () => {
                                 {t('Ijtimoiy tarmoqlar')}
                             </p>
                             <div className="flex justify-start gap-3">
-                                <SocialIcon
-                                    icon={<Send size={18} />}
-                                    color="hover:bg-sky-500"
-                                    href="#"
-                                />
-                                <SocialIcon
-                                    icon={<Facebook size={18} />}
-                                    color="hover:bg-blue-600"
-                                    href="#"
-                                />
-                                <SocialIcon
-                                    icon={<Instagram size={18} />}
-                                    color="hover:bg-pink-600"
-                                    href="#"
-                                />
-                                <SocialIcon
-                                    icon={<Youtube size={18} />}
-                                    color="hover:bg-red-600"
-                                    href="#"
-                                />
+                                {social.telegram && (
+                                    <SocialIcon
+                                        icon={<Send size={18} />}
+                                        color="hover:bg-sky-500"
+                                        href={social.telegram}
+                                    />
+                                )}
+                                {social.facebook && (
+                                    <SocialIcon
+                                        icon={<Facebook size={18} />}
+                                        color="hover:bg-blue-600"
+                                        href={social.facebook}
+                                    />
+                                )}
+                                {social.instagram && (
+                                    <SocialIcon
+                                        icon={<Instagram size={18} />}
+                                        color="hover:bg-pink-600"
+                                        href={social.instagram}
+                                    />
+                                )}
+                                {social.youtube && (
+                                    <SocialIcon
+                                        icon={<Youtube size={18} />}
+                                        color="hover:bg-red-600"
+                                        href={social.youtube}
+                                    />
+                                )}
                             </div>
                         </div>
                     </div>
@@ -158,6 +193,8 @@ type SocialIconType = {
 const SocialIcon = ({ icon, color, href }: SocialIconType) => (
     <a
         href={href}
+        target="_blank"
+        rel="noopener noreferrer"
         className={`w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-all duration-300 ${color} hover:border-transparent hover:scale-110`}
     >
         {icon}

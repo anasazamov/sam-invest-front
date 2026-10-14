@@ -52,17 +52,17 @@ pm2 save
 ```env
 DATABASE_URL="postgresql://saminvest:PAROL@localhost:5432/saminvest?schema=public"
 PORT=1248
-JWT_SECRET=uzun_maxfiy_satr
+JWT_SECRET=<uzun_maxfiy_tasodifiy_satr>
 
-# Telegram
-TELEGRAM_BOT_TOKEN=8956818384:AAF...
-TELEGRAM_SUPERADMIN_ID=1698951222
+# Telegram  (⚠️ haqiqiy token faqat .env faylda — hujjatga yozilmaydi)
+TELEGRAM_BOT_TOKEN=<bot_token_bu_yerga>
+TELEGRAM_SUPERADMIN_ID=<superadmin_chat_id>
 TELEGRAM_WEBHOOK_URL=https://api.saminvestcompany.uz/chat/telegram/webhook
-TELEGRAM_WEBHOOK_SECRET=uzun_tasodifiy_secret
+TELEGRAM_WEBHOOK_SECRET=<uzun_tasodifiy_secret>
 
 # Web Push (generatsiya: npx web-push generate-vapid-keys)
-VAPID_PUBLIC_KEY=B...
-VAPID_PRIVATE_KEY=...
+VAPID_PUBLIC_KEY=<vapid_public_key>
+VAPID_PRIVATE_KEY=<vapid_private_key>
 VAPID_SUBJECT=mailto:admin@saminvestcompany.uz
 
 # Aholi statistikasi (bo'sh bo'lsa seed ishlatiladi)
@@ -97,7 +97,7 @@ pm2 save
 ### Frontend `.env.production`
 ```env
 NEXT_PUBLIC_BACKEND_URL=https://api.saminvestcompany.uz
-NEXT_PUBLIC_YANDEX_API_KEY=ad132ae0-c732-4243-9a6a-b75e1f260018
+NEXT_PUBLIC_YANDEX_API_KEY=<yandex_maps_api_key>   # domenga cheklangan bo'lsin
 ```
 
 ---

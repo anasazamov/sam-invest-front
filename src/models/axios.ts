@@ -13,7 +13,7 @@ export const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = Cookies.get('univer-front-token')
+    const token = Cookies.get('saminvest-token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }

@@ -1,23 +1,31 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
-import Image from 'next/image'
+import { pick } from '@/lib/blocks'
+import { useSiteSettings } from '@/lib/site-settings'
+import { useLocale, useTranslations } from 'next-intl'
 import 'swiper/css'
 import 'swiper/css/scrollbar'
 import { A11y, Autoplay } from 'swiper/modules'
 import { Swiper, SwiperSlide } from 'swiper/react'
 
-const links = [
+// Admin "Dizayn" → "Foydali havolalar" bo'sh bo'lsa ishlatiladigan standart ro'yxat
+const DEFAULT_LINKS = [
     { title: "Lex.uz", url: 'https://www.lex.uz/uz/' },
     { title: "Huquqiyportal.uz", url: 'https://www.huquqiyportal.uz/' },
     { title: 'Data.gov.uz', url: 'http://data.gov.uz/' },
     { title: 'Parliament.gov.uz', url: 'https://parliament.gov.uz/' },
     { title: "President.uz", url: 'https://president.uz/uz' },
     { title: 'Gov.uz', url: 'https://gov.uz/oz' },
-]
+].map((l) => ({ ...l, logo: `/${l.title.toLowerCase()}.png` }))
 
 const UsefulLinks = () => {
     const t = useTranslations()
+    const locale = useLocale()
+    const { data } = useSiteSettings()
+    const custom = (data?.usefulLinks ?? []).filter((l) => l.url)
+    const links = custom.length
+        ? custom.map((l) => ({ title: pick(l.title, locale) || l.url, url: l.url, logo: l.logo }))
+        : DEFAULT_LINKS
     return (
         <div className="container-cs py-12">
             <div className="flex items-center justify-between mb-8">
@@ -41,8 +49,6 @@ const UsefulLinks = () => {
                 className="useful-links-swiper pb-12!"
             >
                 {links.map((link, index) => {
-                    const imageName = link.title.toLowerCase() + '.png';
-
                     return (
                         <SwiperSlide key={index}>
                             <a
@@ -53,13 +59,14 @@ const UsefulLinks = () => {
                             >
                                 <div className="relative flex flex-col items-center gap-4 p-6 h-full bg-white dark:bg-[#232351] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all duration-300 group-hover:shadow-xl group-hover:border-[#2B2B7A]/20 group-hover:-translate-y-1">
                                     <div className="relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center grayscale group-hover:grayscale-0 transition-all duration-500">
-                                        <Image
-                                            src={`/${imageName}`}
-                                            alt={link.title}
-                                            fill
-                                            className="object-contain p-2"
-                                            sizes="(max-width: 768px) 80px, 96px"
-                                        />
+                                        {link.logo && (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={link.logo}
+                                                alt={link.title}
+                                                className="h-full w-full object-contain p-2"
+                                            />
+                                        )}
                                     </div>
                                     <div className="space-y-1">
                                         <p className="font-bold text-sm md:text-base text-gray-800 dark:text-gray-100 group-hover:text-[#2B2B7A] transition-colors">

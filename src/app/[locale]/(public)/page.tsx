@@ -1,10 +1,4 @@
-import Announcements from '@/components/announcements/announcements'
-import CalcCta from '@/components/calc/calc-cta'
-import Events from '@/components/events/events'
-import HeroSection from '@/components/hero-section/hero-section'
-import NewsSection from '@/components/news-section/news-section'
-import StatisticsSection from '@/components/statistics-section/statistics-section'
-import UsefulLinks from '@/components/useful-links/useful-links'
+import HomeSections from '@/components/home/home-sections'
 import { getTranslations } from 'next-intl/server'
 import { Metadata } from 'next'
 
@@ -49,9 +43,9 @@ export async function generateMetadata({
         title,
         description,
         keywords,
-        authors: [{ name: 'Samarqand Viloyati Investitsiya, Sanoat va Savdo Boshqarmasi' }],
-        creator: 'Saminvest Company',
-        publisher: 'Samarqand Regional Administration',
+        authors: [{ name: 'Samarqand Invest kompaniyasi' }],
+        creator: 'Samarqand Invest Company',
+        publisher: 'Samarqand Invest Company',
         alternates: {
             canonical: canonicalUrl,
             languages: {
@@ -72,7 +66,7 @@ export async function generateMetadata({
                     url: 'https://saminvestcompany.uz/og-image.jpg',
                     width: 1200,
                     height: 630,
-                    alt: 'Saminvest Company — Samarqand Investment, Industry and Trade Department',
+                    alt: 'Samarqand Invest Company',
                 },
             ],
         },
@@ -94,16 +88,7 @@ export async function generateMetadata({
     }
 }
 
+// Seksiyalar tartibi va yoqilganligi admin → "Dizayn" → "Bosh sahifa"dan boshqariladi
 export default function Home() {
-    return (
-        <div>
-            <HeroSection />
-            <CalcCta />
-            <NewsSection />
-            <StatisticsSection />
-            <Announcements />
-            <Events />
-            <UsefulLinks />
-        </div>
-    )
+    return <HomeSections />
 }

@@ -5,6 +5,7 @@ import { Edit, Trash2 } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Dispatch, SetStateAction, useState } from 'react'
 
+import { sanitizeHtml } from '@/lib/sanitize-html'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -209,14 +210,15 @@ const AdminPublicationList = ({
                             <div
                                 className="pt-2 line-clamp-3 text-sm **:bg-transparent! **:text-current! text-white wrap-anywhere"
                                 dangerouslySetInnerHTML={{
-                                    __html:
+                                    __html: sanitizeHtml(
                                         getLocalizedValue(
                                             currentCards[0].content
                                         ) !== '<p></p>'
                                             ? getLocalizedValue(
                                                   currentCards[0].content
                                               )
-                                            : t('Tavsif mavjud emas'),
+                                            : t('Tavsif mavjud emas')
+                                    ),
                                 }}
                             />
                         </div>
@@ -336,11 +338,12 @@ const AdminPublicationList = ({
                             <div
                                 className="pt-2 line-clamp-3 text-sm **:bg-transparent! **:text-current! text-foreground/80 wrap-anywhere"
                                 dangerouslySetInnerHTML={{
-                                    __html:
+                                    __html: sanitizeHtml(
                                         getLocalizedValue(item.content) !==
-                                        '<p></p>'
+                                            '<p></p>'
                                             ? getLocalizedValue(item.content)
-                                            : t('Tavsif mavjud emas'),
+                                            : t('Tavsif mavjud emas')
+                                    ),
                                 }}
                             />
                         </motion.div>

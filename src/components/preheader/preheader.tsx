@@ -1,9 +1,11 @@
 'use client'
+import { pick } from '@/lib/blocks'
+import { useSiteSettings } from '@/lib/site-settings'
 import { api } from '@/models/axios'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ImageIcon, Mail, MapPin, X } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { LanguageSwitcher } from '../language-switcher/language-switcher'
 import { ModeToggle } from '../mode-toggle/mode-toggle'
@@ -21,6 +23,19 @@ const Preheader = () => {
     const [isOpen, setIsOpen] = useState(false)
     const [showMap, setShowMap] = useState(false)
     const t = useTranslations()
+    const locale = useLocale()
+    const address =
+        detailsData.data?.address?.[locale] ||
+        detailsData.data?.address?.uz ||
+        "Samarqand shahri, Ko‘ksaroy maydoni, 2-uy"
+    const coords = detailsData.data?.mapCoords
+    const lat = Number(coords?.lat) || 39.657179
+    const lng = Number(coords?.lng) || 66.965423
+    const mapSrc = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`
+    // Admin → "Dizayn" → "Header"
+    const { data: site } = useSiteSettings()
+    const pre = site?.preheader
+    const announcement = pick(pre?.text, locale)
 
     const updateFontSize = (size: string) => {
         document.documentElement.style.fontSize = size
@@ -53,6 +68,7 @@ const Preheader = () => {
         <div className="hidden md:block py-4 relative">
             <div className="container-cs flex justify-between items-center">
                 <SidebarTrigger />
+                {pre?.showAddress !== false && (
                 <div
                     className="relative"
                     onMouseEnter={() => setShowMap(true)}
@@ -60,8 +76,8 @@ const Preheader = () => {
                 >
                     <h1 className="flex justify-center items-center gap-2 cursor-pointer hover:text-primary transition-colors">
                         <MapPin size={16} />
-                        <span className='md:hidden xl:block'>Samarqand shahri, Ko‘ksaroy maydoni, 1-uy</span>
-                        <span className='hidden md:block xl:hidden'>Manzil</span>
+                        <span className='md:hidden xl:block'>{address}</span>
+                        <span className='hidden md:block xl:hidden'>{t('Manzil')}</span>
                     </h1>
 
                     <AnimatePresence>
@@ -80,16 +96,27 @@ const Preheader = () => {
                                     width="100%"
                                     height="100%"
                                     frameBorder="0"
-                                    src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3071.936630453303!2d66.965423!3d39.657179!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0:0x0!2zMznCsDM5JzI1LjgiTiA2NsKwNTcnNTUuNSJF!5e0!3m2!1sen!2s!4v1735142400!5m2!1sen!2s"
+                                    src={mapSrc}
                                     allowFullScreen
                                 />
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
-                <h1 className="flex justify-center items-center gap-2 md:hidden lg:flex">
-                    <Mail size={16} /> {detailsData.data?.infoEmails}
-                </h1>
+                )}
+                {announcement && (
+                    <p
+                        className="mx-4 min-w-0 flex-1 truncate text-center text-sm font-medium text-blue-600 dark:text-blue-400"
+                        title={announcement}
+                    >
+                        {announcement}
+                    </p>
+                )}
+                {pre?.showEmail !== false && detailsData.data?.infoEmails && (
+                    <h1 className="flex justify-center items-center gap-2 md:hidden lg:flex">
+                        <Mail size={16} /> {detailsData.data?.infoEmails}
+                    </h1>
+                )}
                 <div className="flex gap-2">
                     <LanguageSwitcher />
                     <ModeToggle />

@@ -1,5 +1,7 @@
 'use client'
 
+import { sanitizeHtml } from '@/lib/sanitize-html'
+import { useSocialLinks } from '@/lib/social-links'
 import { Button } from '@/components/ui/button'
 import { api, baseBackendUrl } from '@/models/axios'
 import { useQuery } from '@tanstack/react-query'
@@ -13,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react'
 const AdminPublicationItem = ({ id, tab }: { id: string; tab: string }) => {
   const locale = useLocale()
   const t = useTranslations()
+  const social = useSocialLinks()
   const [activeMedia, setActiveMedia] = useState<string>('')
 
   const { data: post, isLoading } = useQuery({
@@ -208,7 +211,7 @@ const AdminPublicationItem = ({ id, tab }: { id: string; tab: string }) => {
           <article className="prose prose-zinc dark:prose-invert max-w-none text-justify">
             {content && content !== '<p></p>' ? (
               <div
-                dangerouslySetInnerHTML={{ __html: content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
                 className="ql-editor p-0! font-medium text-lg md:text-xl leading-[1.8] text-foreground/80
                            **:bg-transparent! **:text-current! wrap-anywhere whitespace-normal"
               />
@@ -277,7 +280,7 @@ const AdminPublicationItem = ({ id, tab }: { id: string; tab: string }) => {
                 className="w-full bg-[#432DD7] text-white hover:bg-background/90 font-black rounded-xl h-12"
                 asChild
               >
-                <Link href="https://t.me/samarqandinvestkompaniyasi">
+                <Link href={social.telegram || '#'} target="_blank" rel="noopener noreferrer">
                   Telegram Kanal
                 </Link>
               </Button>

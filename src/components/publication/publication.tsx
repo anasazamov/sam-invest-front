@@ -9,6 +9,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
+import { sanitizeHtml } from '@/lib/sanitize-html'
 import { api, baseBackendUrl } from '@/models/axios'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
@@ -178,7 +179,7 @@ const PublicationExtended = () => {
                 <div
                   className="text-xl pt-2 line-clamp-2 text-white/90 **:bg-transparent! **:text-current!"
                   dangerouslySetInnerHTML={{
-                    __html: getLocalizedValue(firstNews.content),
+                    __html: sanitizeHtml(getLocalizedValue(firstNews.content)),
                   }}
                 />
               </div>
@@ -225,10 +226,11 @@ const PublicationExtended = () => {
                   WebkitBoxOrient: 'vertical',
                 }}
                 dangerouslySetInnerHTML={{
-                  __html:
+                  __html: sanitizeHtml(
                     getLocalizedValue(item.content) !== '<p></p>'
                       ? getLocalizedValue(item.content)
-                      : t('Tavsif mavjud emas'),
+                      : t('Tavsif mavjud emas')
+                  ),
                 }}
               />
             </motion.div>
